@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}{{ error_title or 'System Alert' }} — MergeMate{% endblock %}
+{% block breadcrumb %}System Alert{% endblock %}
+
+{% block content %}
+<div class="form-container-centered">
+  <div class="form-card error-card">
+    <div class="error-icon-box">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+    </div>
+
+    <h1 class="error-title">{{ error_title or 'Application Notice' }}</h1>
+    <p class="error-desc text-muted">{{ error_message or 'The application encountered an unexpected condition.' }}</p>
+
+    {% if show_db_help %}
+      <div class="db-troubleshoot-box">
+        <h3 class="troubleshoot-title">How to start MongoDB on Windows:</h3>
+        <ol class="troubleshoot-steps">
+          <li>
+            <strong>Start MongoDB Windows Service:</strong><br>
+            Open Command Prompt (or PowerShell) as Administrator and run:
+            <pre><code>net start MongoDB</code></pre>
+          </li>
+          <li>
+            <strong>Or check Windows Services GUI:</strong><br>
+            Press <kbd>Win</kbd> + <kbd>R</kbd>, type <code>services.msc</code>, locate <strong>MongoDB Server (MongoDB)</strong>, and click <strong>Start</strong>.
+          </li>
+          <li>
+            <strong>Verify MongoDB Connection:</strong><br>
+            By default, MongoDB Community Server runs locally at <code>mongodb://127.0.0.1:27017/</code> with no username or password required.
+          </li>
+          <li>
+            <strong>Initialize Indexes &amp; Sample Data:</strong><br>
+            In your project directory, execute:
+            <pre><code>python database/setup_indexes.py
+python database/sample_data.py</code></pre>
+          </li>
+        </ol>
+      </div>
+    {% endif %}
+
+    <div class="form-actions" style="justify-content: center; margin-top: 1.5rem;">
+      <a href="{{ url_for('dashboard') }}" class="btn btn-primary">Return to Dashboard</a>
+      <a href="javascript:location.reload();" class="btn btn-secondary">Retry Connection</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

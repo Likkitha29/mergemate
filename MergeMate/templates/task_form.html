@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}{% if task %}Edit Task — {{ task.title }}{% else %}New Task — MergeMate{% endif %}{% endblock %}
+{% block breadcrumb %}<a href="{{ url_for('list_tasks') }}">Tasks</a> / {% if task %}Edit{% else %}New{% endif %}{% endblock %}
+
+{% block content %}
+<div class="form-container-centered">
+  <div class="form-card">
+    <div class="form-header">
+      <h1 class="form-title">{% if task %}Edit Project Task{% else %}Create New Task{% endif %}</h1>
+      <p class="form-subtitle">Assign task deliverables strictly to team members belonging to the chosen project.</p>
+    </div>
+
+    <form method="POST" action="{% if task %}{{ url_for('edit_task', task_id=task._id) }}{% else %}{{ url_for('create_task') }}{% endif %}" class="standard-form" id="taskForm">
+      <div class="form-field">
+        <label for="title" class="input-label">Task Title <span class="required">*</span></label>
+        <input type="text" id="title" name="title" value="{{ task.title if task else '' }}" required placeholder="e.g. Design MongoDB Aggregation Pipelines" class="form-input">
+      </div>
+
+      <div class="form-field">
+        <label for="description" class="input-label">Task Description</label>
+        <textarea id="description" name="description" rows="3" placeholder="Provide implementation details, references, and acceptance criteria..." class="form-textarea">{{ task.description if task else '' }}</textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-field">
+          <label for="task_project_select" class="input-label">Project <span class="required">*</span></label>
+          <select id="task_project_select" name="project_id" class="form-select" required>
+            <option value="">Select Project</option>
+            {% for p in projects %}
+              <option value="{{ p._id }}" {% if (task and task.project_id == p._id) or (not task and preselected_project_id == p._id|string) %}selected{% endif %}>
+                {{ p.project_name }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label for="task_member_select" class="input-label">Assigned Member <span class="required">*</span></label>
+          <select id="task_member_select" name="assigned_to" class="form-select" required data-current-assignee="{{ task.assigned_to if task else '' }}">
+            <option value="">Select Project First</option>
+          </select>
+          <span class="field-hint">Dynamically loaded from project_members collection.</span>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-field">
+          <label for="priority" class="input-label">Priority <span class="required">*</span></label>
+          <select id="priority" name="priority" class="form-select" required>
+            <option value="Low" {% if task and task.priority == 'Low' %}selected{% endif %}>Low</option>
+            <option value="Medium" {% if not task or task.priority == 'Medium' %}selected{% endif %}>Medium</option>
+            <option value="High" {% if task and task.priority == 'High' %}selected{% endif %}>High</option>
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label for="status" class="input-label">Status <span class="required">*</span></label>
+          <select id="status" name="status" class="form-select" required>
+            <option value="To Do" {% if not task or task.status == 'To Do' %}selected{% endif %}>To Do</option>
+            <option value="In Progress" {% if task and task.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+            <option value="Completed" {% if task and task.status == 'Completed' %}selected{% endif %}>Completed</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-field">
+          <label for="start_date" class="input-label">Start Date <span class="required">*</span></label>
+          <input type="date" id="start_date" name="start_date" value="{{ task.start_date if task else today_str }}" required class="form-input">
+        </div>
+
+        <div class="form-field">
+          <label for="deadline" class="input-label">Deadline <span class="required">*</span></label>
+          <input type="date" id="deadline" name="deadline" value="{{ task.deadline if task else '' }}" required class="form-input">
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <a href="{{ url_for('list_tasks') }}" class="btn btn-ghost">Cancel</a>
+        <button type="submit" class="btn btn-primary">
+          {% if task %}Save Changes{% else %}Create Task{% endif %}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

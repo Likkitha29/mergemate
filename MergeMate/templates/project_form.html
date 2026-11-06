@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}{% if project %}Edit Project — {{ project.project_name }}{% else %}New Project — MergeMate{% endblock %}{% endblock %}
+{% block breadcrumb %}<a href="{{ url_for('list_projects') }}">Projects</a> / {% if project %}Edit{% else %}New{% endif %}{% endblock %}
+
+{% block content %}
+<div class="form-container-centered">
+  <div class="form-card">
+    <div class="form-header">
+      <h1 class="form-title">{% if project %}Edit Project Details{% else %}Create New Team Project{% endif %}</h1>
+      <p class="form-subtitle">Fill in the project information. Deadlines and lead assignments will be indexed in MongoDB.</p>
+    </div>
+
+    <form method="POST" action="{% if project %}{{ url_for('edit_project', project_id=project._id) }}{% else %}{{ url_for('create_project') }}{% endif %}" class="standard-form" id="projectForm">
+      <div class="form-field">
+        <label for="project_name" class="input-label">Project Name <span class="required">*</span></label>
+        <input type="text" id="project_name" name="project_name" value="{{ project.project_name if project else '' }}" required placeholder="e.g. Smart Campus Transit Portal" class="form-input">
+        <span class="field-hint">Must be unique within the team workspace.</span>
+      </div>
+
+      <div class="form-field">
+        <label for="description" class="input-label">Project Description</label>
+        <textarea id="description" name="description" rows="3" placeholder="Explain the project scope, technical stack, and student objectives..." class="form-textarea">{{ project.description if project else '' }}</textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-field">
+          <label for="start_date" class="input-label">Start Date <span class="required">*</span></label>
+          <input type="date" id="start_date" name="start_date" value="{{ project.start_date if project else today_str }}" required class="form-input">
+        </div>
+
+        <div class="form-field">
+          <label for="deadline" class="input-label">Project Deadline <span class="required">*</span></label>
+          <input type="date" id="deadline" name="deadline" value="{{ project.deadline if project else '' }}" required class="form-input">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-field">
+          <label for="status" class="input-label">Project Status <span class="required">*</span></label>
+          <select id="status" name="status" class="form-select" required>
+            <option value="Not Started" {% if project and project.status == 'Not Started' %}selected{% endif %}>Not Started</option>
+            <option value="In Progress" {% if not project or project.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+            <option value="Completed" {% if project and project.status == 'Completed' %}selected{% endif %}>Completed</option>
+            <option value="On Hold" {% if project and project.status == 'On Hold' %}selected{% endif %}>On Hold</option>
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label for="project_lead" class="input-label">Project Lead <span class="required">*</span></label>
+          <select id="project_lead" name="project_lead" class="form-select" required>
+            <option value="">Select Team Member</option>
+            {% for u in users %}
+              <option value="{{ u._id }}" {% if project and project.project_lead == u._id %}selected{% endif %}>
+                {{ u.name }} ({{ u.role }})
+              </option>
+            {% endfor %}
+          </select>
+          <span class="field-hint">The lead will be automatically assigned as a project member.</span>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <a href="{{ url_for('list_projects') }}" class="btn btn-ghost">Cancel</a>
+        <button type="submit" class="btn btn-primary">
+          {% if project %}Save Changes{% else %}Create Project{% endif %}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

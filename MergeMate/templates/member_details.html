@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}{{ member.name }} — MergeMate{% endblock %}
+{% block breadcrumb %}<a href="{{ url_for('list_members') }}">Team Members</a> / {{ member.name }}{% endblock %}
+
+{% block content %}
+<div class="member-profile-container">
+  <!-- Profile Header Card -->
+  <div class="profile-header-card">
+    <div class="profile-header-left">
+      <div class="profile-avatar">{{ member.name[:2]|upper }}</div>
+      <div class="profile-meta">
+        <h1 class="profile-name">{{ member.name }}</h1>
+        <div class="profile-role text-muted">{{ member.role }}</div>
+        <div class="profile-email font-mono text-muted">{{ member.email }}</div>
+        {% if member.skills %}
+          <div class="skills-wrap" style="margin-top: 0.75rem;">
+            {% for s in member.skills %}
+              <span class="skill-tag">{{ s }}</span>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="profile-header-right">
+      <div class="profile-kpi-grid">
+        <div class="kpi-box">
+          <span class="kpi-num tabular-nums">{{ projects|length }}</span>
+          <span class="kpi-lbl">Projects</span>
+        </div>
+        <div class="kpi-box">
+          <span class="kpi-num tabular-nums text-success">{{ completed_tasks|length }}</span>
+          <span class="kpi-lbl">Done Tasks</span>
+        </div>
+        <div class="kpi-box">
+          <span class="kpi-num tabular-nums {% if overdue_tasks|length > 0 %}text-danger{% endif %}">{{ overdue_tasks|length }}</span>
+          <span class="kpi-lbl">Overdue</span>
+        </div>
+        <div class="kpi-box">
+          <span class="kpi-num tabular-nums text-primary">{{ total_hours }}</span>
+          <span class="kpi-lbl">Total Hours</span>
+        </div>
+      </div>
+      <div class="profile-btn-row">
+        <a href="{{ url_for('edit_member', member_id=member._id) }}" class="btn btn-secondary btn-sm">Edit Profile</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile Content Split -->
+  <div class="details-split">
+    <!-- Left: Projects & Assigned Tasks -->
+    <div class="details-left">
+      <!-- Assigned Projects -->
+      <div class="panel">
+        <div class="panel-header">
+          <h2 class="panel-title">Assigned Projects ({{ projects|length }})</h2>
+        </div>
+        <div class="panel-body compact">
+          {% if projects %}
+            <div class="mini-project-list">
+              {% for p in projects %}
+                <div class="mini-project-item">
+                  <div>
+                    <a href="{{ url_for('project_details', project_id=p.project_id) }}" class="font-semibold">{{ p.project_name }}</a>
+                    <div class="text-muted text-xs font-mono">Assigned: {{ p.assigned_at.strftime('%Y-%m-%d') if p.assigned_at else 'Active' }}</div>
+                  </div>
+                  <span class="badge badge-status badge-{{ p.status|lower|replace(' ', '-') }}">{{ p.status }}</span>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="empty-state-compact">
+              <p>Not currently assigned to any projects.</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Assigned Tasks -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <h2 class="panel-title">Assigned Tasks ({{ tasks|length }})</h2>
+            <span class="panel-subtitle">{{ pending_tasks|length }} Pending &middot; {{ completed_tasks|length }} Completed</span>
+          </div>
+        </div>
+        <div class="panel-body compact">
+          {% if tasks %}
+            <div class="task-list">
+              {% for t in tasks %}
+                <div class="task-card {% if t.status != 'Completed' and t.deadline < today_str %}task-overdue{% endif %}">
+                  <div class="task-header">
+                    <span class="task-title">{{ t.title }}</span>
+                    <span class="badge badge-status badge-{{ t.status|lower|replace(' ', '-') }}">{{ t.status }}</span>
+                  </div>
+                  <div class="task-footer">
+                    <div class="task-meta text-muted">
+                      <span>{{ t.project_name }}</span> &middot;
+                      <span class="font-mono tabular-nums {% if t.status != 'Completed' and t.deadline < today_str %}text-danger font-semibold{% endif %}">
+                        Due: {{ t.deadline }}
+                      </span>
+                    </div>
+                    <a href="{{ url_for('edit_task', task_id=t._id) }}" class="btn btn-ghost btn-xs">Edit</a>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="empty-state-compact">
+              <p>No tasks assigned to this team member.</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Contribution Records -->
+    <div class="details-right">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <h2 class="panel-title">Logged Contributions</h2>
+            <span class="panel-subtitle">Total recorded effort: <strong>{{ total_hours }} hours</strong></span>
+          </div>
+          <a href="{{ url_for('create_contribution') }}" class="btn btn-secondary btn-sm">Log Hours</a>
+        </div>
+        <div class="panel-body compact">
+          {% if contributions %}
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Task &amp; Project</th>
+                  <th>Description</th>
+                  <th class="text-right">Hours</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for c in contributions %}
+                  <tr>
+                    <td class="font-mono text-xs tabular-nums">{{ c.contribution_date }}</td>
+                    <td>
+                      <div class="font-medium text-sm">{{ c.task_title or 'Project Work' }}</div>
+                      <div class="text-muted text-xs">{{ c.project_name }}</div>
+                    </td>
+                    <td class="text-sm text-muted">{{ c.description }}</td>
+                    <td class="text-right font-mono tabular-nums font-semibold">{{ c.hours_spent }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <div class="empty-state-compact">
+              <p>No contributions logged yet for this member.</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

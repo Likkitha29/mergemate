@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}{% if contrib %}Edit Contribution — MergeMate{% else %}Log Contribution — MergeMate{% endif %}{% endblock %}
+{% block breadcrumb %}<a href="{{ url_for('list_contributions') }}">Contributions</a> / {% if contrib %}Edit{% else %}Log Hours{% endif %}{% endblock %}
+
+{% block content %}
+<div class="form-container-centered">
+  <div class="form-card">
+    <div class="form-header">
+      <h1 class="form-title">{% if contrib %}Edit Contribution Record{% else %}Log Team Member Contribution{% endif %}</h1>
+      <p class="form-subtitle">Record exact working hours spent by a student on their assigned task deliverable.</p>
+    </div>
+
+    <form method="POST" action="{% if contrib %}{{ url_for('edit_contribution', contrib_id=contrib._id) }}{% else %}{{ url_for('create_contribution') }}{% endif %}" class="standard-form" id="contributionForm">
+      {% if not contrib %}
+        <div class="form-row">
+          <div class="form-field">
+            <label for="contrib_project_select" class="input-label">Project <span class="required">*</span></label>
+            <select id="contrib_project_select" name="project_id" class="form-select" required>
+              <option value="">Select Project</option>
+              {% for p in projects %}
+                <option value="{{ p._id }}">{{ p.project_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="contrib_member_select" class="input-label">Team Member <span class="required">*</span></label>
+            <select id="contrib_member_select" name="user_id" class="form-select" required>
+              <option value="">Select Project First</option>
+            </select>
+            <span class="field-hint">Must belong to the selected project.</span>
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label for="contrib_task_select" class="input-label">Related Task <span class="required">*</span></label>
+          <select id="contrib_task_select" name="task_id" class="form-select" required>
+            <option value="">Select Member First</option>
+          </select>
+          <span class="field-hint">Dynamically filtered to tasks assigned to this member in this project.</span>
+        </div>
+      {% endif %}
+
+      <div class="form-row">
+        <div class="form-field">
+          <label for="hours_spent" class="input-label">Hours Spent <span class="required">*</span></label>
+          <input type="number" step="0.5" min="0.1" max="100" id="hours_spent" name="hours_spent" value="{{ contrib.hours_spent if contrib else '' }}" required placeholder="e.g. 4.5" class="form-input">
+          <span class="field-hint">Positive decimal number (e.g., 2.5, 4.0, 6.5).</span>
+        </div>
+
+        <div class="form-field">
+          <label for="contribution_date" class="input-label">Date of Contribution <span class="required">*</span></label>
+          <input type="date" id="contribution_date" name="contribution_date" value="{{ contrib.contribution_date if contrib else today_str }}" required class="form-input">
+        </div>
+      </div>
+
+      <div class="form-field">
+        <label for="description" class="input-label">Work Description <span class="required">*</span></label>
+        <textarea id="description" name="description" rows="3" required placeholder="Describe what was researched, coded, debugged, or documented during these hours..." class="form-textarea">{{ contrib.description if contrib else '' }}</textarea>
+      </div>
+
+      <div class="form-actions">
+        <a href="{{ url_for('list_contributions') }}" class="btn btn-ghost">Cancel</a>
+        <button type="submit" class="btn btn-primary">
+          {% if contrib %}Update Record{% else %}Record Contribution{% endif %}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

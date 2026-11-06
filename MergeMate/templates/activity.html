@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Activity History — MergeMate{% endblock %}
+{% block breadcrumb %}Activity History{% endblock %}
+
+{% block content %}
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">System Audit &amp; Activity History</h1>
+      <p class="page-subtitle">Chronological ledger of project modifications, task completions, and recorded contributions.</p>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-card">
+    <form method="GET" action="{{ url_for('activity_history') }}" class="filter-form">
+      <div class="filter-group">
+        <label for="action_type" class="filter-label">Action Type</label>
+        <select id="action_type" name="action_type" class="form-select">
+          <option value="">All Action Types</option>
+          <option value="PROJECT_CREATED" {% if selected_action == 'PROJECT_CREATED' %}selected{% endif %}>Project Created</option>
+          <option value="PROJECT_UPDATED" {% if selected_action == 'PROJECT_UPDATED' %}selected{% endif %}>Project Updated</option>
+          <option value="PROJECT_DELETED" {% if selected_action == 'PROJECT_DELETED' %}selected{% endif %}>Project Deleted</option>
+          <option value="TASK_CREATED" {% if selected_action == 'TASK_CREATED' %}selected{% endif %}>Task Created</option>
+          <option value="TASK_STATUS_CHANGED" {% if selected_action == 'TASK_STATUS_CHANGED' %}selected{% endif %}>Task Status Changed</option>
+          <option value="TASK_DELETED" {% if selected_action == 'TASK_DELETED' %}selected{% endif %}>Task Deleted</option>
+          <option value="CONTRIBUTION_RECORDED" {% if selected_action == 'CONTRIBUTION_RECORDED' %}selected{% endif %}>Contribution Logged</option>
+          <option value="MEMBER_ASSIGNED" {% if selected_action == 'MEMBER_ASSIGNED' %}selected{% endif %}>Member Assigned</option>
+          <option value="MEMBER_REMOVED" {% if selected_action == 'MEMBER_REMOVED' %}selected{% endif %}>Member Removed</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="project_id" class="filter-label">Related Project</label>
+        <select id="project_id" name="project_id" class="form-select">
+          <option value="">All Projects</option>
+          {% for p in projects %}
+            <option value="{{ p._id }}" {% if selected_project == p._id|string %}selected{% endif %}>{{ p.project_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="filter-buttons">
+        <button type="submit" class="btn btn-secondary">Filter</button>
+        {% if selected_action or selected_project %}
+          <a href="{{ url_for('activity_history') }}" class="btn btn-ghost">Reset</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+
+  <!-- Activity Timeline Table -->
+  {% if activities %}
+    <div class="panel">
+      <div class="panel-body compact">
+        <div class="activity-timeline-full">
+          {% for a in activities %}
+            <div class="activity-full-row">
+              <div class="activity-full-badge">
+                <span class="badge badge-subtle font-mono text-xs">{{ a.action_type }}</span>
+              </div>
+              <div class="activity-full-body">
+                <div class="activity-full-desc font-medium">{{ a.description }}</div>
+                <div class="activity-full-meta text-muted text-xs">
+                  {% if a.user_name %}
+                    <span>Actor: <strong>{{ a.user_name }}</strong></span>
+                    <span class="sep">&middot;</span>
+                  {% endif %}
+                  {% if a.project_name %}
+                    <span>Project: <strong>{{ a.project_name }}</strong></span>
+                    <span class="sep">&middot;</span>
+                  {% endif %}
+                  <span class="font-mono tabular-nums">{{ a.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <h3>No Activities Recorded</h3>
+      <p class="text-muted">Activity logs are automatically written on project, task, and contribution events.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,654 @@
+{% extends "base.html" %}
+
+{% block title %}MongoDB Reports & Analytics — MergeMate{% endblock %}
+{% block breadcrumb %}Reports &amp; Analytics{% endblock %}
+
+{% block content %}
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">MongoDB Aggregation Reports &amp; Analytics</h1>
+      <p class="page-subtitle">Eight advanced analytical pipelines demonstrating $lookup, $group, $match, $unwind, $project, and $cond.</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-secondary btn-sm" onclick="toggleAllPipelines()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        <span>Toggle Pipeline Code</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="reports-vertical-stack">
+    <!-- REPORT 1: Task Completion Percentage by Project -->
+    <div class="panel report-card" id="rep1">
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <span class="report-badge">Report 1</span>
+          <h2 class="panel-title">Task Completion Percentage by Project</h2>
+          <span class="panel-subtitle">Calculates completed &divide; total tasks using $lookup, $filter, and $cond</span>
+        </div>
+        <button class="pipeline-toggle-btn" onclick="togglePipeline('pipe1')">View MongoDB Pipeline</button>
+      </div>
+
+      <div class="pipeline-code-block" id="pipe1" style="display: none;">
+        <pre><code>db.projects.aggregate([
+  {
+    $lookup: {
+      from: "tasks",
+      localField: "_id",
+      foreignField: "project_id",
+      as: "tasks"
+    }
+  },
+  {
+    $project: {
+      project_name: 1,
+      status: 1,
+      total_tasks: { $size: "$tasks" },
+      completed_tasks: {
+        $size: {
+          $filter: {
+            input: "$tasks",
+            as: "t",
+            cond: { $eq: ["$$t.status", "Completed"] }
+          }
+        }
+      }
+    }
+  },
+  {
+    $project: {
+      project_name: 1,
+      status: 1,
+      total_tasks: 1,
+      completed_tasks: 1,
+      completion_pct: {
+        $cond: {
+          if: { $gt: ["$total_tasks", 0] },
+          then: { $multiply: [{ $divide: ["$completed_tasks", "$total_tasks"] }, 100] },
+          else: 0
+        }
+      }
+    }
+  },
+  { $sort: { completion_pct: -1 } }
+])</code></pre>
+      </div>
+
+      <div class="panel-body compact">
+        {% if report1 %}
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Project Name</th>
+                <th>Status</th>
+                <th class="text-right">Total Tasks</th>
+                <th class="text-right">Completed Tasks</th>
+                <th>Completion Progress</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in report1 %}
+                <tr>
+                  <td class="font-semibold">{{ r.project_name }}</td>
+                  <td><span class="badge badge-status badge-{{ r.status|lower|replace(' ', '-') }}">{{ r.status }}</span></td>
+                  <td class="text-right font-mono tabular-nums">{{ r.total_tasks }}</td>
+                  <td class="text-right font-mono tabular-nums text-success font-semibold">{{ r.completed_tasks }}</td>
+                  <td style="min-width: 160px;">
+                    <div class="progress-wrap">
+                      <div class="progress-info">
+                        <span class="tabular-nums font-semibold">{{ r.completion_pct }}%</span>
+                      </div>
+                      <div class="progress-bar">
+                        <div class="progress-fill {% if r.completion_pct == 100 %}fill-green{% else %}fill-primary{% endif %}" style="width: {{ r.completion_pct }}%"></div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="empty-state-compact"><p>No project data available.</p></div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- REPORT 2: Completed and Pending Tasks by Team Member -->
+    <div class="panel report-card" id="rep2">
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <span class="report-badge">Report 2</span>
+          <h2 class="panel-title">Completed &amp; Pending Tasks by Team Member</h2>
+          <span class="panel-subtitle">Demonstrates outer join via $lookup from users to tasks collection</span>
+        </div>
+        <button class="pipeline-toggle-btn" onclick="togglePipeline('pipe2')">View MongoDB Pipeline</button>
+      </div>
+
+      <div class="pipeline-code-block" id="pipe2" style="display: none;">
+        <pre><code>db.users.aggregate([
+  {
+    $lookup: {
+      from: "tasks",
+      localField: "_id",
+      foreignField: "assigned_to",
+      as: "tasks"
+    }
+  },
+  {
+    $project: {
+      name: 1,
+      role: 1,
+      total_tasks: { $size: "$tasks" },
+      completed_tasks: {
+        $size: {
+          $filter: {
+            input: "$tasks",
+            as: "t",
+            cond: { $eq: ["$$t.status", "Completed"] }
+          }
+        }
+      },
+      pending_tasks: {
+        $size: {
+          $filter: {
+            input: "$tasks",
+            as: "t",
+            cond: { $ne: ["$$t.status", "Completed"] }
+          }
+        }
+      }
+    }
+  },
+  { $sort: { total_tasks: -1 } }
+])</code></pre>
+      </div>
+
+      <div class="panel-body compact">
+        {% if report2 %}
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Member Name</th>
+                <th>Role</th>
+                <th class="text-right">Total Assigned</th>
+                <th class="text-right">Completed</th>
+                <th class="text-right">Pending</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in report2 %}
+                <tr>
+                  <td class="font-semibold">{{ r.name }}</td>
+                  <td class="text-muted">{{ r.role }}</td>
+                  <td class="text-right font-mono tabular-nums font-semibold">{{ r.total_tasks }}</td>
+                  <td class="text-right font-mono tabular-nums text-success font-semibold">{{ r.completed_tasks }}</td>
+                  <td class="text-right font-mono tabular-nums text-primary font-semibold">{{ r.pending_tasks }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="empty-state-compact"><p>No member task data available.</p></div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- REPORT 3: Overdue Tasks with Project and Member Details -->
+    <div class="panel report-card" id="rep3">
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <span class="report-badge">Report 3</span>
+          <h2 class="panel-title">Overdue Tasks with Project and Member Details</h2>
+          <span class="panel-subtitle">Uses $match with date comparison (&lt; today) and multi-collection $lookup</span>
+        </div>
+        <button class="pipeline-toggle-btn" onclick="togglePipeline('pipe3')">View MongoDB Pipeline</button>
+      </div>
+
+      <div class="pipeline-code-block" id="pipe3" style="display: none;">
+        <pre><code>db.tasks.aggregate([
+  {
+    $match: {
+      status: { $ne: "Completed" },
+      deadline: { $lt: "{{ today_str }}" }
+    }
+  },
+  {
+    $lookup: {
+      from: "projects",
+      localField: "project_id",
+      foreignField: "_id",
+      as: "project"
+    }
+  },
+  {
+    $lookup: {
+      from: "users",
+      localField: "assigned_to",
+      foreignField: "_id",
+      as: "member"
+    }
+  },
+  {
+    $project: {
+      title: 1,
+      deadline: 1,
+      priority: 1,
+      status: 1,
+      project_name: { $arrayElemAt: ["$project.project_name", 0] },
+      member_name: { $arrayElemAt: ["$member.name", 0] }
+    }
+  },
+  { $sort: { deadline: 1 } }
+])</code></pre>
+      </div>
+
+      <div class="panel-body compact">
+        {% if report3 %}
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Overdue Task Title</th>
+                <th>Project</th>
+                <th>Assigned Member</th>
+                <th>Priority</th>
+                <th>Deadline</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in report3 %}
+                <tr class="row-overdue">
+                  <td class="font-semibold">{{ r.title }}</td>
+                  <td>{{ r.project_name }}</td>
+                  <td>{{ r.member_name }}</td>
+                  <td><span class="badge badge-priority badge-{{ r.priority|lower }}">{{ r.priority }}</span></td>
+                  <td class="font-mono text-danger font-semibold tabular-nums">{{ r.deadline }}</td>
+                  <td><span class="badge badge-status badge-{{ r.status|lower|replace(' ', '-') }}">{{ r.status }}</span></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="empty-state-compact"><p class="text-success">&check; No overdue tasks found in database.</p></div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- REPORT 4: Workload Distribution Among Team Members -->
+    <div class="panel report-card" id="rep4">
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <span class="report-badge">Report 4</span>
+          <h2 class="panel-title">Workload Distribution Among Team Members</h2>
+          <span class="panel-subtitle">Computes active pending deliverables using $match + $group stage</span>
+        </div>
+        <button class="pipeline-toggle-btn" onclick="togglePipeline('pipe4')">View MongoDB Pipeline</button>
+      </div>
+
+      <div class="pipeline-code-block" id="pipe4" style="display: none;">
+        <pre><code>db.tasks.aggregate([
+  { $match: { status: { $ne: "Completed" } } },
+  {
+    $group: {
+      _id: "$assigned_to",
+      active_task_count: { $sum: 1 }
+    }
+  },
+  {
+    $lookup: {
+      from: "users",
+      localField: "_id",
+      foreignField: "_id",
+      as: "user"
+    }
+  },
+  {
+    $project: {
+      member_name: { $arrayElemAt: ["$user.name", 0] },
+      role: { $arrayElemAt: ["$user.role", 0] },
+      active_task_count: 1
+    }
+  },
+  { $sort: { active_task_count: -1 } }
+])</code></pre>
+      </div>
+
+      <div class="panel-body compact">
+        {% if report4 %}
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Member Name</th>
+                <th>Role</th>
+                <th class="text-right">Active Tasks in Queue</th>
+                <th>Workload Intensity</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in report4 %}
+                <tr>
+                  <td class="font-semibold">{{ r.member_name or 'Unassigned' }}</td>
+                  <td class="text-muted">{{ r.role or 'N/A' }}</td>
+                  <td class="text-right font-mono tabular-nums font-semibold">{{ r.active_task_count }}</td>
+                  <td style="min-width: 140px;">
+                    <div class="progress-bar">
+                      <div class="progress-fill fill-purple" style="width: {{ (r.active_task_count / (report4[0].active_task_count if report4[0].active_task_count > 0 else 1)) * 100 }}%"></div>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="empty-state-compact"><p>No active tasks currently assigned.</p></div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- REPORT 5: Total Contribution Hours per Member -->
+    <div class="panel report-card" id="rep5">
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <span class="report-badge">Report 5</span>
+          <h2 class="panel-title">Total Contribution Hours per Member</h2>
+          <span class="panel-subtitle">Uses $group with accumulator $sum on hours_spent across contribution docs</span>
+        </div>
+        <button class="pipeline-toggle-btn" onclick="togglePipeline('pipe5')">View MongoDB Pipeline</button>
+      </div>
+
+      <div class="pipeline-code-block" id="pipe5" style="display: none;">
+        <pre><code>db.contributions.aggregate([
+  {
+    $group: {
+      _id: "$user_id",
+      total_hours: { $sum: "$hours_spent" },
+      entries_count: { $sum: 1 }
+    }
+  },
+  {
+    $lookup: {
+      from: "users",
+      localField: "_id",
+      foreignField: "_id",
+      as: "user"
+    }
+  },
+  {
+    $project: {
+      member_name: { $arrayElemAt: ["$user.name", 0] },
+      role: { $arrayElemAt: ["$user.role", 0] },
+      total_hours: 1,
+      entries_count: 1
+    }
+  },
+  { $sort: { total_hours: -1 } }
+])</code></pre>
+      </div>
+
+      <div class="panel-body compact">
+        {% if report5 %}
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Member Name</th>
+                <th>Role</th>
+                <th class="text-right">Logged Entries</th>
+                <th class="text-right">Total Hours Recorded</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in report5 %}
+                <tr>
+                  <td class="font-semibold">{{ r.member_name or 'Unknown' }}</td>
+                  <td class="text-muted">{{ r.role or 'N/A' }}</td>
+                  <td class="text-right font-mono tabular-nums">{{ r.entries_count }}</td>
+                  <td class="text-right font-mono tabular-nums font-semibold text-primary">{{ r.total_hours }} hrs</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="empty-state-compact"><p>No contribution entries recorded yet.</p></div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- REPORT 6: Project Deadline and Progress Summary -->
+    <div class="panel report-card" id="rep6">
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <span class="report-badge">Report 6</span>
+          <h2 class="panel-title">Project Deadline and Progress Summary</h2>
+          <span class="panel-subtitle">Sorted by chronological deadline order with calculated completion percentage</span>
+        </div>
+        <button class="pipeline-toggle-btn" onclick="togglePipeline('pipe6')">View MongoDB Pipeline</button>
+      </div>
+
+      <div class="pipeline-code-block" id="pipe6" style="display: none;">
+        <pre><code>db.projects.aggregate([
+  {
+    $lookup: {
+      from: "tasks",
+      localField: "_id",
+      foreignField: "project_id",
+      as: "tasks"
+    }
+  },
+  {
+    $project: {
+      project_name: 1,
+      status: 1,
+      start_date: 1,
+      deadline: 1,
+      total_tasks: { $size: "$tasks" },
+      completed_tasks: {
+        $size: {
+          $filter: {
+            input: "$tasks",
+            as: "t",
+            cond: { $eq: ["$$t.status", "Completed"] }
+          }
+        }
+      }
+    }
+  },
+  { $sort: { deadline: 1 } }
+])</code></pre>
+      </div>
+
+      <div class="panel-body compact">
+        {% if report6 %}
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Project Name</th>
+                <th>Status</th>
+                <th>Timeline</th>
+                <th class="text-right">Task Progress</th>
+                <th>Completion Percentage</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in report6 %}
+                <tr>
+                  <td class="font-semibold">{{ r.project_name }}</td>
+                  <td><span class="badge badge-status badge-{{ r.status|lower|replace(' ', '-') }}">{{ r.status }}</span></td>
+                  <td class="font-mono text-xs tabular-nums">{{ r.start_date }} &rarr; <span class="{% if r.is_overdue %}text-danger font-semibold{% endif %}">{{ r.deadline }}</span></td>
+                  <td class="text-right font-mono tabular-nums">{{ r.completed_tasks }}/{{ r.total_tasks }}</td>
+                  <td style="min-width: 140px;">
+                    <div class="progress-wrap">
+                      <span class="tabular-nums font-semibold">{{ r.progress }}%</span>
+                      <div class="progress-bar">
+                        <div class="progress-fill {% if r.progress == 100 %}fill-green{% else %}fill-primary{% endif %}" style="width: {{ r.progress }}%"></div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="empty-state-compact"><p>No projects registered.</p></div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- REPORT 7: Team Members with No Assigned Tasks -->
+    <div class="panel report-card" id="rep7">
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <span class="report-badge">Report 7</span>
+          <h2 class="panel-title">Team Members with No Assigned Tasks</h2>
+          <span class="panel-subtitle">Finds unutilized capacity using $lookup on tasks with $match on empty array</span>
+        </div>
+        <button class="pipeline-toggle-btn" onclick="togglePipeline('pipe7')">View MongoDB Pipeline</button>
+      </div>
+
+      <div class="pipeline-code-block" id="pipe7" style="display: none;">
+        <pre><code>db.users.aggregate([
+  {
+    $lookup: {
+      from: "tasks",
+      localField: "_id",
+      foreignField: "assigned_to",
+      as: "tasks"
+    }
+  },
+  {
+    $match: {
+      tasks: { $size: 0 }
+    }
+  },
+  {
+    $project: {
+      name: 1,
+      email: 1,
+      role: 1,
+      skills: 1
+    }
+  },
+  { $sort: { name: 1 } }
+])</code></pre>
+      </div>
+
+      <div class="panel-body compact">
+        {% if report7 %}
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Member Name</th>
+                <th>Role</th>
+                <th>Email</th>
+                <th>Skills &amp; Capabilities</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in report7 %}
+                <tr>
+                  <td class="font-semibold">{{ r.name }}</td>
+                  <td class="text-muted">{{ r.role }}</td>
+                  <td class="font-mono text-xs">{{ r.email }}</td>
+                  <td>
+                    <div class="skills-wrap">
+                      {% for s in r.skills %}
+                        <span class="skill-tag">{{ s }}</span>
+                      {% endfor %}
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="empty-state-compact"><p class="text-success">&check; All team members currently have at least one assigned task.</p></div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- REPORT 8: Projects with Tasks Approaching Deadlines -->
+    <div class="panel report-card" id="rep8">
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <span class="report-badge">Report 8</span>
+          <h2 class="panel-title">Tasks Approaching Deadlines (Next 7 Days)</h2>
+          <span class="panel-subtitle">Uses $match range query: {{ today_str }} &le; deadline &le; {{ seven_days_later }}</span>
+        </div>
+        <button class="pipeline-toggle-btn" onclick="togglePipeline('pipe8')">View MongoDB Pipeline</button>
+      </div>
+
+      <div class="pipeline-code-block" id="pipe8" style="display: none;">
+        <pre><code>db.tasks.aggregate([
+  {
+    $match: {
+      status: { $ne: "Completed" },
+      deadline: {
+        $gte: "{{ today_str }}",
+        $lte: "{{ seven_days_later }}"
+      }
+    }
+  },
+  {
+    $lookup: {
+      from: "projects",
+      localField: "project_id",
+      foreignField: "_id",
+      as: "project"
+    }
+  },
+  {
+    $lookup: {
+      from: "users",
+      localField: "assigned_to",
+      foreignField: "_id",
+      as: "user"
+    }
+  },
+  {
+    $project: {
+      title: 1,
+      deadline: 1,
+      priority: 1,
+      status: 1,
+      project_name: { $arrayElemAt: ["$project.project_name", 0] },
+      member_name: { $arrayElemAt: ["$user.name", 0] }
+    }
+  },
+  { $sort: { deadline: 1 } }
+])</code></pre>
+      </div>
+
+      <div class="panel-body compact">
+        {% if report8 %}
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Deliverable Title</th>
+                <th>Project</th>
+                <th>Assignee</th>
+                <th>Priority</th>
+                <th>Deadline</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in report8 %}
+                <tr>
+                  <td class="font-semibold">{{ r.title }}</td>
+                  <td>{{ r.project_name }}</td>
+                  <td>{{ r.member_name }}</td>
+                  <td><span class="badge badge-priority badge-{{ r.priority|lower }}">{{ r.priority }}</span></td>
+                  <td class="font-mono text-warning font-semibold tabular-nums">{{ r.deadline }}</td>
+                  <td><span class="badge badge-status badge-{{ r.status|lower|replace(' ', '-') }}">{{ r.status }}</span></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="empty-state-compact"><p class="text-muted">No pending tasks with deadlines in the next 7 days.</p></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Team Members — MergeMate{% endblock %}
+{% block breadcrumb %}Team Members{% endblock %}
+
+{% block content %}
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Team Member Directory</h1>
+      <p class="page-subtitle">Track college team members, designated roles, technical skills, and aggregated contribution hours.</p>
+    </div>
+    <div class="header-actions">
+      <a href="{{ url_for('create_member') }}" class="btn btn-primary">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span>Add Team Member</span>
+      </a>
+    </div>
+  </div>
+
+  {% if members %}
+    <div class="members-grid">
+      {% for m in members %}
+        <div class="member-card">
+          <div class="member-card-header">
+            <div class="member-avatar-lg">{{ m.name[:2]|upper }}</div>
+            <div class="member-card-headings">
+              <a href="{{ url_for('member_details', member_id=m._id) }}" class="member-name-link">{{ m.name }}</a>
+              <div class="member-role text-muted">{{ m.role }}</div>
+              <div class="member-email text-muted">{{ m.email }}</div>
+            </div>
+          </div>
+
+          {% if m.skills %}
+            <div class="member-skills-section">
+              <div class="skills-label">Skills &amp; Technologies:</div>
+              <div class="skills-wrap">
+                {% for s in m.skills %}
+                  <span class="skill-tag">{{ s }}</span>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+
+          <div class="member-stats-row">
+            <div class="member-stat">
+              <span class="stat-number tabular-nums">{{ m.projects_count }}</span>
+              <span class="stat-label">Projects</span>
+            </div>
+            <div class="member-stat">
+              <span class="stat-number tabular-nums">{{ m.tasks_count }}</span>
+              <span class="stat-label">Tasks</span>
+            </div>
+            <div class="member-stat">
+              <span class="stat-number tabular-nums text-success">{{ m.completed_tasks }}</span>
+              <span class="stat-label">Done</span>
+            </div>
+            <div class="member-stat">
+              <span class="stat-number tabular-nums text-primary">{{ m.total_hours or 0 }}</span>
+              <span class="stat-label">Logged Hrs</span>
+            </div>
+          </div>
+
+          <div class="member-card-footer">
+            <a href="{{ url_for('member_details', member_id=m._id) }}" class="btn btn-ghost btn-sm">View Profile &rarr;</a>
+            <div class="card-footer-actions">
+              <a href="{{ url_for('edit_member', member_id=m._id) }}" class="action-btn" title="Edit member">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </a>
+              <form action="{{ url_for('delete_member', member_id=m._id) }}" method="POST" class="inline-form" onsubmit="return confirm('Remove team member {{ m.name }}? This will fail safely if they have active assigned tasks.');">
+                <button type="submit" class="action-btn text-danger" title="Delete member">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <h3>No Team Members Found</h3>
+      <p class="text-muted">Register your student team members to begin assigning tasks.</p>
+      <a href="{{ url_for('create_member') }}" class="btn btn-primary">Add Member</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

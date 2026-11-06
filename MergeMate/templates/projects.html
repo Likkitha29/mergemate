@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Projects — MergeMate{% endblock %}
+{% block breadcrumb %}Projects{% endblock %}
+
+{% block content %}
+<div class="page-container">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Project Management</h1>
+      <p class="page-subtitle">Manage multi-student college projects, leads, deadlines, and overall progress.</p>
+    </div>
+    <div class="header-actions">
+      <a href="{{ url_for('create_project') }}" class="btn btn-primary">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span>Create Project</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Filter & Search Bar -->
+  <div class="filter-card">
+    <form method="GET" action="{{ url_for('list_projects') }}" class="filter-form">
+      <div class="filter-group">
+        <label for="search" class="filter-label">Search Project</label>
+        <input type="text" id="search" name="search" value="{{ search_query }}" placeholder="Filter by name..." class="form-input">
+      </div>
+
+      <div class="filter-group">
+        <label for="status" class="filter-label">Status</label>
+        <select id="status" name="status" class="form-select">
+          <option value="">All Statuses</option>
+          <option value="Not Started" {% if status_filter == 'Not Started' %}selected{% endif %}>Not Started</option>
+          <option value="In Progress" {% if status_filter == 'In Progress' %}selected{% endif %}>In Progress</option>
+          <option value="Completed" {% if status_filter == 'Completed' %}selected{% endif %}>Completed</option>
+          <option value="On Hold" {% if status_filter == 'On Hold' %}selected{% endif %}>On Hold</option>
+        </select>
+      </div>
+
+      <div class="filter-buttons">
+        <button type="submit" class="btn btn-secondary">Filter</button>
+        {% if search_query or status_filter %}
+          <a href="{{ url_for('list_projects') }}" class="btn btn-ghost">Reset</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+
+  <!-- Projects Table & Cards -->
+  {% if projects %}
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Project Name</th>
+            <th>Project Lead</th>
+            <th>Members</th>
+            <th>Progress</th>
+            <th>Timeline</th>
+            <th>Status</th>
+            <th class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in projects %}
+            <tr>
+              <td>
+                <div class="table-title">
+                  <a href="{{ url_for('project_details', project_id=p._id) }}" class="title-link">{{ p.project_name }}</a>
+                </div>
+                <div class="table-desc text-muted">{{ p.description[:75] }}{% if p.description|length > 75 %}...{% endif %}</div>
+              </td>
+              <td>
+                <span class="font-medium">{{ p.lead_name or 'Unassigned' }}</span>
+              </td>
+              <td class="tabular-nums">
+                <span class="member-pill">{{ p.member_count }} members</span>
+              </td>
+              <td style="min-width: 140px;">
+                <div class="progress-wrap">
+                  <div class="progress-info">
+                    <span class="progress-val tabular-nums font-semibold">{{ p.progress }}%</span>
+                    <span class="text-muted text-xs">({{ p.completed_tasks }}/{{ p.total_tasks }})</span>
+                  </div>
+                  <div class="progress-bar">
+                    <div class="progress-fill {% if p.progress == 100 %}fill-green{% else %}fill-primary{% endif %}" style="width: {{ p.progress }}%"></div>
+                  </div>
+                </div>
+              </td>
+              <td class="font-mono text-xs tabular-nums">
+                <div>Start: {{ p.start_date }}</div>
+                <div class="{% if p.is_overdue %}text-danger font-semibold{% endif %}">
+                  Due: {{ p.deadline }}
+                </div>
+              </td>
+              <td>
+                <span class="badge badge-status badge-{{ p.status|lower|replace(' ', '-') }}">
+                  {{ p.status }}
+                </span>
+                {% if p.is_overdue %}
+                  <span class="badge badge-danger">Overdue</span>
+                {% endif %}
+              </td>
+              <td class="text-right table-actions">
+                <a href="{{ url_for('project_details', project_id=p._id) }}" class="action-btn" title="View details">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </a>
+                <a href="{{ url_for('edit_project', project_id=p._id) }}" class="action-btn" title="Edit project">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </a>
+                <form action="{{ url_for('delete_project', project_id=p._id) }}" method="POST" class="inline-form" onsubmit="return confirm('Are you sure you want to delete this project? This will also remove associated tasks and contributions.');">
+                  <button type="submit" class="action-btn text-danger" title="Delete project">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      </div>
+      <h3>No Projects Found</h3>
+      <p class="text-muted">Start by creating your first student team project.</p>
+      <a href="{{ url_for('create_project') }}" class="btn btn-primary">Create New Project</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
